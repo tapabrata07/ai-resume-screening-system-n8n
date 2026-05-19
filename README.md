@@ -4,7 +4,7 @@ An AI-powered recruitment automation workflow built using n8n and Google Gemini.
 
 ## Demo Video
 
-[![Watch the demo](screenshots/thumbnail.png)](https://youtu.be/2Rt283USGEc)
+[![Watch the demo](screenshots/Thumbnail.png)](https://youtu.be/2Rt283USGEc)
 
 ## Workflow Overview
 
