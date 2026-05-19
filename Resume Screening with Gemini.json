@@ -1,0 +1,539 @@
+{
+  "name": "Resume Screening with Gemini",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "resume",
+        "options": {
+          "joinPages": true
+        }
+      },
+      "id": "73f37192-5b99-4933-acd1-e65cae5d7efc",
+      "name": "Extract Resume Text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        464,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze this resume and extract key information:\n\n{{ $json.text }}\n\nProvide:\n- Candidate name\n- Years of experience (estimate from work history)\n- Key technical skills (as array)\n- Education background\n- Overall score (0-100) based on qualifications\n- Recommendation (e.g., \"Strong candidate\", \"Needs review\", \"Not qualified\")\n- Strengths (as array)\n- Concerns or gaps (as array)",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an expert HR recruiter analyzing resumes. Extract structured information and provide objective assessments based on the resume content."
+        }
+      },
+      "id": "18957178-f4dd-489a-8333-23c705986fee",
+      "name": "Screen Resume with Gemini",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        688,
+        400
+      ],
+      "retryOnFail": true,
+      "maxTries": 5
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "ec5c218d-0622-46f2-a49f-d8538136e950",
+      "name": "Gemini Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        760,
+        832
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "XzprMbarirZZTP64",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n\t\t\"candidateName\": {\n\t\t\t\"type\": \"string\"\n\t\t},\n\t\t\"yearsOfExperience\": {\n\t\t\t\"type\": \"number\"\n\t\t},\n\t\t\"keySkills\": {\n\t\t\t\"type\": \"array\",\n\t\t\t\"items\": {\n\t\t\t\t\"type\": \"string\"\n\t\t\t}\n\t\t},\n\t\t\"education\": {\n\t\t\t\"type\": \"string\"\n\t\t},\n\t\t\"overallScore\": {\n\t\t\t\"type\": \"number\"\n\t\t},\n\t\t\"recommendation\": {\n\t\t\t\"type\": \"string\"\n\t\t},\n\t\t\"strengths\": {\n\t\t\t\"type\": \"array\",\n\t\t\t\"items\": {\n\t\t\t\t\"type\": \"string\"\n\t\t\t}\n\t\t},\n\t\t\"concerns\": {\n\t\t\t\"type\": \"array\",\n\t\t\t\"items\": {\n\t\t\t\t\"type\": \"string\"\n\t\t\t}\n\t\t}\n\t}\n}",
+        "autoFix": true
+      },
+      "id": "fe52f64d-fc95-480d-9d81-df53d61a3d0a",
+      "name": "Structured Output",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        764,
+        624
+      ],
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.output.overallScore }}",
+              "rightValue": 70,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5f110402-aa21-4872-b922-cc913abbc201",
+      "name": "Check Score Threshold",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1132,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "status",
+              "value": "Qualified",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "name",
+              "value": "={{ $json.output.candidateName }}",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "score",
+              "value": "={{ $json.output.overallScore }}",
+              "type": "number"
+            },
+            {
+              "id": "4",
+              "name": "recommendation",
+              "value": "={{ $json.output.recommendation }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "skills",
+              "value": "={{ $json.output.keySkills }}",
+              "type": "array"
+            },
+            {
+              "id": "6",
+              "name": "nextStep",
+              "value": "Schedule interview",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5c913b78-1115-4550-b7f2-e406d5444d1a",
+      "name": "Qualified Candidate",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1356,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "status",
+              "value": "Needs Review",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "name",
+              "value": "={{ $json.output.candidateName }}",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "score",
+              "value": "={{ $json.output.overallScore }}",
+              "type": "number"
+            },
+            {
+              "id": "4",
+              "name": "concerns",
+              "value": "={{ $json.output.concerns }}",
+              "type": "array"
+            },
+            {
+              "id": "5",
+              "name": "nextStep",
+              "value": "Manual review required",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "367f7731-1cb9-4061-916e-7cad8bca416c",
+      "name": "Needs Review",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1356,
+        496
+      ]
+    },
+    {
+      "parameters": {
+        "content": "Resume Screening Workflow: Upload PDF, extract text, Gemini analyzes and scores, route by threshold (70+), save to Google Sheets, email recruiter",
+        "height": 200,
+        "width": 600,
+        "color": 2
+      },
+      "id": "8704fede-851f-4274-9bd9-d9e1bccecf39",
+      "name": "Sticky Note 2fc1b46f",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        208,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "content": "Setup: Add Google Sheets ID, add recruiter email, activate workflow, click form URL to upload resumes. Results auto-saved and notifications sent!",
+        "height": 200,
+        "width": 500,
+        "color": 4
+      },
+      "id": "f8751bbe-b49a-4062-af74-90e9291ac030",
+      "name": "Sticky Note 773e058e",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        992,
+        688
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "Resume Screening - Upload Resume",
+        "formDescription": "Upload a resume PDF file for automated screening and evaluation.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Resume PDF",
+              "fieldType": "file",
+              "fieldName": "resume",
+              "multipleFiles": false,
+              "acceptFileTypes": ".pdf",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "buttonLabel": "Submit Resume",
+          "respondWithOptions": {
+            "values": {
+              "formSubmittedText": "Thank you! Your resume has been submitted and is being processed."
+            }
+          }
+        }
+      },
+      "id": "1ea33ee6-2ae8-4d83-aca8-81a621859e8d",
+      "name": "Upload Resume Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        240,
+        400
+      ],
+      "webhookId": "669534b1-4890-44fc-a066-55025f6ab9ed"
+    },
+    {
+      "parameters": {},
+      "id": "dcb0371f-d8a3-4f32-b45c-9bd7ab97ca58",
+      "name": "Combine Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1580,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1R4cNPaVlaIzZNwAGLfOrGa_D9bcJAjlKJqUqJbRKgDY",
+          "mode": "list",
+          "cachedResultName": "COI attendance - 26th Sept",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1R4cNPaVlaIzZNwAGLfOrGa_D9bcJAjlKJqUqJbRKgDY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1R4cNPaVlaIzZNwAGLfOrGa_D9bcJAjlKJqUqJbRKgDY/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "NAME": "={{ $json.name }}",
+            "CLASS ROLL NO.": "={{ $json.status }}",
+            "UNI ROLL NO.": "={{ $json.score }}"
+          },
+          "matchingColumns": [
+            "NAME"
+          ],
+          "schema": [
+            {
+              "id": "NAME",
+              "displayName": "NAME",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CLASS ROLL NO.",
+              "displayName": "CLASS ROLL NO.",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "UNI ROLL NO.",
+              "displayName": "UNI ROLL NO.",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ABLE TO ATTEND CLASS ",
+              "displayName": "ABLE TO ATTEND CLASS ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "29931462-8069-44b2-b3b2-654c65b13b56",
+      "name": "Save to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1804,
+        400
+      ],
+      "retryOnFail": true,
+      "executeOnce": false,
+      "alwaysOutputData": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "rXZudKXVboqKjJeH",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "tapabratamaity5@gmail.com",
+        "subject": "=New Resume Screened: {{ $json.NAME }} (Score: {{ $json[\"UNI ROLL NO.\"] }})",
+        "message": "=<h2>Resume Screening Complete</h2><p><strong>Candidate:</strong> {{ $json.NAME }}</p><p><strong>Status:</strong> {{ $json[\"CLASS ROLL NO.\"] }}</p><p><strong>Score:</strong> {{ $json[\"UNI ROLL NO.\"] }}/100</p><p><strong>Next Step:</strong> {{ $json[\"ABLE TO ATTEND CLASS\"] }}</p><hr><p><em>Processed at {{ $now.toFormat(\"MMMM d, yyyy h:mm a\") }}</em></p>",
+        "options": {}
+      },
+      "id": "d256b0b9-8674-4a25-ab85-f7e205644d11",
+      "name": "Notify Recruiter",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2028,
+        400
+      ],
+      "webhookId": "ff160efa-4bb3-4806-97f7-2cf6b27c368e",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "MmIjUh9KcnhsOUdx",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Extract Resume Text": {
+      "main": [
+        [
+          {
+            "node": "Screen Resume with Gemini",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Screen Resume with Gemini": {
+      "main": [
+        [
+          {
+            "node": "Check Score Threshold",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Screen Resume with Gemini",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Structured Output",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Screen Resume with Gemini",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Score Threshold": {
+      "main": [
+        [
+          {
+            "node": "Qualified Candidate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Needs Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Resume Form": {
+      "main": [
+        [
+          {
+            "node": "Extract Resume Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qualified Candidate": {
+      "main": [
+        [
+          {
+            "node": "Combine Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Results": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Review": {
+      "main": [
+        [
+          {
+            "node": "Combine Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Save to Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Notify Recruiter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "8ef0163b-4d82-45f3-b25f-3fc732ddb272",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4c2f2b08f066abc864e3718a88595376659d3ee24f2aaded70d707b5fb60c7d9"
+  },
+  "id": "01CNqeIHKBo4lvXK",
+  "tags": []
+}
