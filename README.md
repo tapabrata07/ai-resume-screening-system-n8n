@@ -5,7 +5,7 @@ An AI-powered recruitment automation workflow built using n8n and Google Gemini.
 ## Workflow Overview
 
 ![Workflow Screenshot](https://github.com/tapabrata07/ai-resume-screening-system-n8n/blob/b3c9457e34f5feef80fcf9da3adba9acecd517c5/workflow.png)
-
+(https://github.com/tapabrata07/ai-resume-screening-system-n8n/blob/e219a68af1b889e42f79642d82ba9298e31d4f10/screenshots/Submit%20Resume.png)
 ---
 
 ## Features
